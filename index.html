@@ -1,360 +1,587 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C-Voxel Engine</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #1e1e1e;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-            touch-action: none;
-        }
-        #editor-container {
-            width: 35%;
-            display: flex;
-            flex-direction: column;
-            background: #252526;
-            border-right: 2px solid #333;
-            z-index: 10;
-        }
-        #toolbar {
-            padding: 10px;
-            background: #2d2d30;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #3f3f46;
-        }
-        #toolbar h2 {
-            margin: 0;
-            font-size: 16px;
-            color: #4EC9B0;
-        }
-        #run-btn {
-            background: #0e639c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        #run-btn:hover {
-            background: #1177bb;
-        }
-        #code-editor {
-            flex: 1;
-            background: #1e1e1e;
-            color: #d4d4d4;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            padding: 15px;
-            border: none;
-            resize: none;
-            outline: none;
-            line-height: 1.5;
-        }
-        #game-container {
-            flex: 65%;
-            position: relative;
-        }
-        #console-log {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            height: 90px;
-            background: rgba(0, 0, 0, 0.85);
-            border: 1px solid #444;
-            border-radius: 6px;
-            padding: 8px;
-            font-family: monospace;
-            font-size: 11px;
-            overflow-y: auto;
-            color: #9cdcfe;
-            pointer-events: none;
-        }
-        /* Estilos dos Joysticks Virtuais Mobile */
-        .joystick-zone {
-            position: absolute;
-            bottom: 30px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            touch-action: none;
-            z-index: 5;
-        }
-        #joystick-left { left: 30px; }
-        #joystick-right { right: 30px; }
-        
-        .joystick-knob {
-            position: absolute;
-            top: 35px;
-            left: 35px;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>C-Voxel Studio</title>
+  
+  <!-- Fontes Profissionais -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Three.js e OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #121316;
+      --bg-panel: #1e1f24;
+      --bg-header: #18191c;
+      --border-color: #2d3037;
+      --accent-color: #007acc;
+      --accent-hover: #0098ff;
+      --text-main: #e1e4ea;
+      --text-muted: #8b909a;
+      --editor-kw: #569cd6;
+      --editor-type: #4ec9b0;
+      --editor-str: #ce9178;
+      --editor-num: #b5cea8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text-main); }
+
+    /* Layout Principal */
+    #studio-container { display: flex; flex-direction: column; width: 100vw; height: 100vh; }
+    
+    /* Topbar Professional */
+    header {
+      height: 48px; background: var(--bg-header); border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 12px; gap: 8px; z-index: 100;
+    }
+    .brand { font-weight: 700; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .brand span { color: var(--accent-hover); }
+
+    .toolbar-group { display: flex; align-items: center; gap: 6px; }
+    .btn {
+      background: #2a2d34; border: 1px solid var(--border-color); color: var(--text-main);
+      padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;
+    }
+    .btn:hover { background: #353942; border-color: #454954; }
+    .btn-primary { background: var(--accent-color); border-color: var(--accent-color); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    /* Menu Dropdown de Inserção */
+    .dropdown { position: relative; }
+    .dropdown-menu {
+      display: none; position: absolute; top: 110%; left: 0; background: var(--bg-panel);
+      border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+      min-width: 140px; z-index: 200; overflow: hidden;
+    }
+    .dropdown-menu.show { display: block; }
+    .dropdown-item {
+      padding: 8px 12px; font-size: 12px; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 8px;
+    }
+    .dropdown-item:hover { background: var(--accent-color); color: #fff; }
+
+    /* Layout Workspace Area */
+    .workspace { display: flex; flex: 1; height: calc(100vh - 48px); overflow: hidden; }
+
+    /* Painel Esquerdo: Editor de Código */
+    .panel-left {
+      width: 320px; background: var(--bg-panel); border-right: 1px solid var(--border-color);
+      display: flex; flex-direction: column;
+    }
+    .panel-header {
+      height: 32px; background: #16171a; border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; justify-content: space-between;
+    }
+
+    /* Container de Editor com Highlighting */
+    .code-editor-container { position: relative; flex: 1; overflow: hidden; background: #1e1e1e; }
+    .code-input, .code-highlight {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      padding: 12px; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5;
+      white-space: pre-wrap; word-wrap: break-word; tab-size: 2; border: none; outline: none;
+    }
+    .code-input {
+      color: transparent; background: transparent; caret-color: #fff; z-index: 2; resize: none;
+    }
+    .code-highlight { z-index: 1; pointer-events: none; overflow: auto; }
+
+    /* Cores de Sintaxe */
+    .token-kw { color: var(--editor-kw); font-weight: 600; }
+    .token-type { color: var(--editor-type); }
+    .token-str { color: var(--editor-str); }
+    .token-num { color: var(--editor-num); }
+    .token-comment { color: #6a9955; font-style: italic; }
+
+    /* Painel Central: Viewport 3D + Output */
+    .panel-center { flex: 1; display: flex; flex-direction: column; position: relative; background: #000; }
+    #viewport-container { flex: 1; position: relative; width: 100%; height: 100%; }
+    #three-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+
+    /* Joystick de Movimentação (Apenas Esquerda) */
+    #joystick-zone {
+      position: absolute; bottom: 20px; left: 20px; width: 100px; height: 100px;
+      background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%; touch-action: none; display: flex; align-items: center; justify-content: center; z-index: 10;
+    }
+    #joystick-knob {
+      width: 40px; height: 40px; background: rgba(0, 122, 204, 0.8);
+      border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: none;
+      transform: translate(0px, 0px);
+    }
+
+    /* Output Console Separado */
+    .panel-output {
+      height: 120px; background: #141518; border-top: 1px solid var(--border-color);
+      display: flex; flex-direction: column; font-family: 'Fira Code', monospace; font-size: 11px;
+    }
+    .output-logs { flex: 1; padding: 8px; overflow-y: auto; color: var(--text-muted); }
+    .log-entry { margin-bottom: 4px; display: flex; gap: 6px; }
+    .log-entry.info { color: #4ec9b0; }
+    .log-entry.error { color: #f48771; }
+
+    /* Painel Direito: Explorer & Propriedades */
+    .panel-right {
+      width: 280px; background: var(--bg-panel); border-left: 1px solid var(--border-color);
+      display: flex; flex-direction: column;
+    }
+    .explorer-tree { flex: 1; overflow-y: auto; padding: 6px; border-bottom: 1px solid var(--border-color); }
+    .tree-item {
+      padding: 6px 8px; border-radius: 4px; font-size: 12px; display: flex; align-items: center;
+      gap: 6px; cursor: pointer; color: var(--text-main); margin-bottom: 2px;
+    }
+    .tree-item:hover { background: #2a2d34; }
+    .tree-item.selected { background: var(--accent-color); color: #fff; }
+
+    .properties-grid { padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 11px; overflow-y: auto; height: 180px; }
+    .prop-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .prop-label { color: var(--text-muted); width: 70px; }
+    .prop-input {
+      flex: 1; background: #141518; border: 1px solid var(--border-color); color: #fff;
+      padding: 4px 6px; border-radius: 3px; font-family: 'Fira Code', monospace; font-size: 11px;
+    }
+    .prop-checkbox { width: 16px; height: 16px; accent-color: var(--accent-color); }
+
+    /* Suporte a Telas Menores (Mobile Responsive Tabs) */
+    @media (max-width: 800px) {
+      .panel-left { width: 100%; display: none; }
+      .panel-right { width: 100%; display: none; }
+      .panel-left.active, .panel-right.active, .panel-center.active { display: flex; flex: 1; }
+      .mobile-tabs { display: flex !important; }
+    }
+    .mobile-tabs { display: none; background: #101113; border-top: 1px solid var(--border-color); }
+    .tab-btn { flex: 1; padding: 10px; text-align: center; font-size: 11px; color: var(--text-muted); background: none; border: none; }
+    .tab-btn.active { color: var(--accent-hover); font-weight: bold; border-top: 2px solid var(--accent-hover); }
+  </style>
 </head>
 <body>
 
-    <!-- 1. EDITOR -->
-    <div id="editor-container">
-        <div id="toolbar">
-            <h2>C-Voxel Studio</h2>
-            <button id="run-btn" onclick="runCVoxelCode()"> Rodar Jogo</button>
+<div id="studio-container">
+  <!-- Topbar -->
+  <header>
+    <div class="brand"><span>C-Voxel</span> Studio</div>
+    
+    <div class="toolbar-group">
+      <!-- Botão Adicionar Objetos -->
+      <div class="dropdown">
+        <button class="btn btn-primary" onclick="toggleDropdown()">➕ Adicionar</button>
+        <div class="dropdown-menu" id="add-menu">
+          <div class="dropdown-item" onclick="addObject('Block')">🧊 Bloco (Block)</div>
+          <div class="dropdown-item" onclick="addObject('Wedge')">📐 Cunha (Wedge)</div>
+          <div class="dropdown-item" onclick="addObject('Sphere')">🔮 Esfera (Sphere)</div>
+          <div class="dropdown-item" onclick="addObject('Cylinder')">🛢️ Cilindro (Cylinder)</div>
+          <div class="dropdown-item" onclick="addScript()">📜 Novo Script</div>
         </div>
-        <textarea id="code-editor" placeholder="Escreva seu c�digo C-Voxel aqui...">
-<Criando e testando a cunha e cor>
+      </div>
+
+      <button class="btn btn-primary" onclick="runScript()">▶ Rodar</button>
+      <button class="btn" onclick="toggleCameraMode()" id="btn-cam-mode">🧊 Modo: 3D</button>
+    </div>
+  </header>
+
+  <!-- Area do Studio -->
+  <div class="workspace">
+    <!-- Esquerda: Code Editor -->
+    <div class="panel-left active" id="pane-editor">
+      <div class="panel-header">
+        <span>Script Principal</span>
+        <span>C-Voxel v2.0</span>
+      </div>
+      <div class="code-editor-container">
+        <textarea class="code-input" id="code-input" spellcheck="false" oninput="updateEditor()"></textarea>
+        <pre class="code-highlight" id="code-highlight"><code id="code-content"></code></pre>
+      </div>
+    </div>
+
+    <!-- Centro: Viewport 3D + Output -->
+    <div class="panel-center active" id="pane-viewport">
+      <div id="viewport-container">
+        <canvas id="three-canvas"></canvas>
+        
+        <!-- Joystick de Movimento Apenas -->
+        <div id="joystick-zone">
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+
+      <!-- Output Console -->
+      <div class="panel-output">
+        <div class="panel-header">Output Console</div>
+        <div class="output-logs" id="output-logs"></div>
+      </div>
+    </div>
+
+    <!-- Direita: Explorer & Propriedades -->
+    <div class="panel-right" id="pane-explorer">
+      <div class="panel-header">Explorer</div>
+      <div class="explorer-tree" id="explorer-list">
+        <!-- Itens inseridos dinamicamente -->
+      </div>
+
+      <div class="panel-header">Propriedades</div>
+      <div class="properties-grid" id="properties-panel">
+        <div class="prop-row">
+          <span class="prop-label">Nome</span>
+          <input type="text" class="prop-input" id="prop-name" readonly />
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Posição X,Y,Z</span>
+          <input type="text" class="prop-input" id="prop-pos" onchange="applyPropertyChange()" />
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Tamanho X,Y,Z</span>
+          <input type="text" class="prop-input" id="prop-size" onchange="applyPropertyChange()" />
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Cor (Hex)</span>
+          <input type="color" class="prop-input" id="prop-color" onchange="applyPropertyChange()" style="height:26px;" />
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Ancorado</span>
+          <input type="checkbox" class="prop-checkbox" id="prop-anchor" onchange="applyPropertyChange()" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Tabs -->
+  <div class="mobile-tabs">
+    <button class="tab-btn active" onclick="switchMobileTab('pane-viewport', this)">🎮 Viewport</button>
+    <button class="tab-btn" onclick="switchMobileTab('pane-editor', this)">📜 Script</button>
+    <button class="tab-btn" onclick="switchMobileTab('pane-explorer', this)">📁 Explorer</button>
+  </div>
+</div>
+
+<script>
+  // --- ESTADO GLOBAL & OBJETOS ---
+  let scene, camera, renderer, controls;
+  let is2DMode = false;
+  let workspaceObjects = {};
+  let selectedObjectKey = null;
+  let scriptCount = 0;
+
+  // Código Inicial Padrão
+  const defaultScript = `<Criando e testando objetos no C-Voxel>
 block.Create:(Wedge, MinhaCunha)
-block.Color:(MinhaCunha) = #FF5733
-        </textarea>
-    </div>
+block.Color:(MinhaCunha) = #FE5733
+block.Position:(MinhaCunha) = 0, 0.5, 0
 
-    <!-- 2. TELA 3D & CONTROLES MOBILE -->
-    <div id="game-container">
-        <div id="console-log">[C-Voxel System] Engine pronta.</div>
-        
-        <!-- Joystick Esquerdo (Movimento) -->
-        <div id="joystick-left" class="joystick-zone">
-            <div id="knob-left" class="joystick-knob"></div>
-        </div>
+block.Create:(Block, MeuBloco)
+block.Color:(MeuBloco) = #007ACC
+block.Position:(MeuBloco) = 2, 0.5, 0
+block.Anchor:(MeuBloco) = true`;
 
-        <!-- Joystick Direito (C�mera) -->
-        <div id="joystick-right" class="joystick-zone">
-            <div id="knob-right" class="joystick-knob"></div>
-        </div>
-    </div>
+  // --- INICIALIZAÇÃO DA CENA THREE.JS ---
+  function initThree() {
+    const container = document.getElementById('viewport-container');
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x121316);
 
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    // Câmeras (3D Perspectiva e 2D Ortográfica)
+    const aspect = container.clientWidth / container.clientHeight;
+    camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+    camera.position.set(4, 4, 6);
 
-    <script>
-        const container = document.getElementById('game-container');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(0, 3, 5);
+    // Iluminação
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(10, 20, 15);
+    scene.add(dirLight);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
+    // Grade do Piso (Grid)
+    const gridHelper = new THREE.GridHelper(20, 20, 0x007acc, 0x2d3037);
+    scene.add(gridHelper);
 
-        // Luzes
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 10, 7);
-        scene.add(dirLight);
+    // OrbitControls (Rotação de câmera via Touch direto no Viewport)
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
 
-        let worldObjects = {};
-        
-        // Controle de C�mera �rbita Manual para Toque
-        let cameraAngleX = 0;
-        let cameraAngleY = 0.5;
-        let cameraDistance = 5;
+    window.addEventListener('resize', onWindowResize);
+    animate();
+  }
 
-        function updateCameraPosition() {
-            camera.position.x = cameraDistance * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
-            camera.position.y = cameraDistance * Math.sin(cameraAngleY);
-            camera.position.z = cameraDistance * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
-            camera.lookAt(0, 0, 0);
+  function animate() {
+    requestAnimationFrame(animate);
+    updateJoystickMovement();
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  function onWindowResize() {
+    const container = document.getElementById('viewport-container');
+    if (!container) return;
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  }
+
+  // --- ALTERNAR MODO 2D / 3D ---
+  function toggleCameraMode() {
+    is2DMode = !is2DMode;
+    const btn = document.getElementById('btn-cam-mode');
+    if (is2DMode) {
+      btn.innerText = "📐 Modo: 2D";
+      camera.position.set(0, 10, 0.01);
+      controls.enableRotate = false; // Trava rotação em 2D
+      logOutput("Modo de Visão alterado para 2D (Top-Down)", "info");
+    } else {
+      btn.innerText = "🧊 Modo: 3D";
+      camera.position.set(4, 4, 6);
+      controls.enableRotate = true;
+      logOutput("Modo de Visão alterado para 3D (Perspectiva)", "info");
+    }
+    camera.lookAt(0,0,0);
+  }
+
+  // --- SINTAXE E HIGHLIGHT DO EDITOR ---
+  function updateEditor() {
+    const textarea = document.getElementById('code-input');
+    const content = document.getElementById('code-content');
+    let code = textarea.value;
+
+    // Regex Syntax Highlighting
+    let highlighted = code
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/(&lt;.*?&gt;)/g, '<span class="token-comment">$1</span>')
+      .replace(/\b(block\.Create|block\.Color|block\.Position|block\.Size|block\.Anchor)\b/g, '<span class="token-kw">$1</span>')
+      .replace(/\b(Block|Wedge|Sphere|Cylinder)\b/g, '<span class="token-type">$1</span>')
+      .replace(/(#[a-fA-F0-9]{6})/g, '<span class="token-str">$1</span>')
+      .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="token-num">$1</span>');
+
+    content.innerHTML = highlighted;
+  }
+
+  // Sync Scroll entre Textarea e Highlighting
+  document.getElementById('code-input').addEventListener('scroll', function() {
+    const highlight = document.getElementById('code-highlight');
+    highlight.scrollTop = this.scrollTop;
+    highlight.scrollLeft = this.scrollLeft;
+  });
+
+  // --- INTERPRETADOR DA LINGUAGEM C-VOXEL ---
+  function runScript() {
+    const code = document.getElementById('code-input').value;
+    logOutput("Executando Script C-Voxel...", "info");
+
+    // Limpa objetos antigos
+    Object.keys(workspaceObjects).forEach(key => scene.remove(workspaceObjects[key].mesh));
+    workspaceObjects = {};
+
+    const lines = code.split('\n');
+    lines.forEach(line => {
+      line = line.trim();
+      if (!line || line.startsWith('<')) return;
+
+      if (line.startsWith('block.Create:')) {
+        const match = line.match(/block\.Create:\s*\(([^,]+),\s*([^)]+)\)/);
+        if (match) createGeometry(match[1].trim(), match[2].trim());
+      } 
+      else if (line.startsWith('block.Color:')) {
+        const match = line.match(/block\.Color:\s*\(([^)]+)\)\s*=\s*(#[a-fA-F0-9]{6})/);
+        if (match && workspaceObjects[match[1].trim()]) {
+          workspaceObjects[match[1].trim()].mesh.material.color.set(match[2].trim());
+          workspaceObjects[match[1].trim()].color = match[2].trim();
         }
-        updateCameraPosition();
-
-        function logToConsole(message) {
-            const consoleBox = document.getElementById('console-log');
-            consoleBox.innerHTML += `<br>> ${message}`;
-            consoleBox.scrollTop = consoleBox.scrollHeight;
+      }
+      else if (line.startsWith('block.Position:')) {
+        const match = line.match(/block\.Position:\s*\(([^)]+)\)\s*=\s*([^,]+),\s*([^,]+),\s*(.+)/);
+        if (match && workspaceObjects[match[1].trim()]) {
+          const obj = workspaceObjects[match[1].trim()].mesh;
+          obj.position.set(parseFloat(match[2]), parseFloat(match[3]), parseFloat(match[4]));
         }
-
-        // Interpretador C-Voxel com Suporte a Wedge
-        function runCVoxelCode() {
-            Object.values(worldObjects).forEach(obj => scene.remove(obj));
-            worldObjects = {};
-            
-            const code = document.getElementById('code-editor').value;
-            const lines = code.split('\n');
-
-            logToConsole("Iniciando compila��o C-Voxel...");
-
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-
-                if (line.startsWith('<') && line.endsWith('>')) continue;
-
-                // block.Create:(Formato, Nome)
-                if (line.startsWith('block.Create:')) {
-                    let match = line.match(/block\.Create:\(([^,]+),\s*([^\)]+)\)/);
-                    if (match) {
-                        let type = match[1].trim();
-                        let name = match[2].trim();
-
-                        let geometry;
-                        if (type === 'Square') {
-                            geometry = new THREE.BoxGeometry(1, 1, 1);
-                        } else if (type === 'Sphere') {
-                            geometry = new THREE.SphereGeometry(0.6, 32, 32);
-                        } else if (type === 'Cylinder') {
-                            geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
-                        } else if (type === 'Wedge') {
-                            // Criando formato de Cunha (Wedge) customizado em 3D
-                            geometry = new THREE.BufferGeometry();
-                            const vertices = new Float32Array([
-                                -0.5, -0.5,  0.5, // 0
-                                 0.5, -0.5,  0.5, // 1
-                                 0.5, -0.5, -0.5, // 2
-                                -0.5, -0.5, -0.5, // 3
-                                -0.5,  0.5, -0.5, // 4
-                                 0.5,  0.5, -0.5  // 5
-                            ]);
-                            const indices = [
-                                2, 1, 0,  3, 2, 0, // Base
-                                3, 4, 5,  3, 5, 2, // Traseira
-                                0, 4, 3,           // Esquerda
-                                1, 5, 4,  1, 4, 0, // Rampa inclinada
-                                5, 2, 3,  5, 3, 4  // Topo/Lateral fechamento
-                            ];
-                            geometry.setIndex(indices);
-                            geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-                            geometry.computeVertexNormals();
-                        } else {
-                            geometry = new THREE.BoxGeometry(1, 1, 1);
-                        }
-
-                        let material = new THREE.MeshStandardMaterial({ color: 0xffffff });
-                        let mesh = new THREE.Mesh(geometry, material);
-                        
-                        scene.add(mesh);
-                        worldObjects[name] = mesh;
-                        logToConsole(`Bloco criado: [${type}] '${name}'`);
-                    }
-                }
-
-                // block.Color:(Nome) = #HEX
-                if (line.includes('block.Color:')) {
-                    let match = line.match(/block\.Color:\(([^\)]+)\)\s*=\s*(#[\da-fA-F]{6})/);
-                    if (match) {
-                        let name = match[1].trim();
-                        let colorHex = match[2].trim();
-
-                        if (worldObjects[name]) {
-                            worldObjects[name].material.color.set(colorHex);
-                            logToConsole(`Cor aplicada: ${colorHex} em '${name}'`);
-                        } else {
-                            logToConsole(`Erro: Objeto '${name}' n�o achado.`);
-                        }
-                    }
-                }
-            }
+      }
+      else if (line.startsWith('block.Anchor:')) {
+        const match = line.match(/block\.Anchor:\s*\(([^)]+)\)\s*=\s*(true|false)/);
+        if (match && workspaceObjects[match[1].trim()]) {
+          workspaceObjects[match[1].trim()].anchored = (match[2] === 'true');
         }
+      }
+    });
 
-        // L�gica dos Joysticks de Toque na Tela
-        let moveInput = { x: 0, y: 0 };
-        let lookInput = { x: 0, y: 0 };
+    updateExplorer();
+    logOutput("Script executado com sucesso!", "info");
+  }
 
-        function setupJoystick(zoneId, knobId, isMove) {
-            const zone = document.getElementById(zoneId);
-            const knob = document.getElementById(knobId);
-            let activeTouchId = null;
-            let center = { x: 0, y: 0 };
+  // --- CRIAÇÃO DE GEOMETRIAS 3D ---
+  function createGeometry(type, name) {
+    let geom;
+    if (type === 'Wedge') {
+      geom = new THREE.BufferGeometry();
+      const vertices = new Float32Array([
+        -0.5,-0.5,0.5,  0.5,-0.5,0.5, -0.5,0.5,-0.5,   0.5,-0.5,0.5,  0.5,0.5,-0.5, -0.5,0.5,-0.5,
+        -0.5,-0.5,-0.5, -0.5,-0.5,0.5, -0.5,0.5,-0.5,  0.5,-0.5,0.5,  0.5,-0.5,-0.5, 0.5,0.5,-0.5,
+        -0.5,-0.5,-0.5, 0.5,-0.5,-0.5,  0.5,-0.5,0.5,  -0.5,-0.5,-0.5, 0.5,-0.5,0.5, -0.5,-0.5,0.5
+      ]);
+      geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+      geom.computeVertexNormals();
+    } else if (type === 'Sphere') {
+      geom = new THREE.SphereGeometry(0.5, 32, 16);
+    } else if (type === 'Cylinder') {
+      geom = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+    } else {
+      geom = new THREE.BoxGeometry(1, 1, 1);
+    }
 
-            zone.addEventListener('touchstart', (e) => {
-                const touch = e.changedTouches[0];
-                activeTouchId = touch.identifier;
-                const rect = zone.getBoundingClientRect();
-                center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-            });
+    const mat = new THREE.MeshStandardMaterial({ color: 0x007acc, roughness: 0.4 });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.position.set(0, 0.5, 0);
+    scene.add(mesh);
 
-            zone.addEventListener('touchmove', (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    if (touch.identifier === activeTouchId) {
-                        let dx = touch.clientX - center.x;
-                        let dy = touch.clientY - center.y;
-                        let dist = Math.sqrt(dx * dx + dy * dy);
-                        let maxDist = 40;
+    workspaceObjects[name] = { mesh, type, name, color: '#007acc', anchored: false };
+    selectObject(name);
+  }
 
-                        if (dist > maxDist) {
-                            dx = (dx / dist) * maxDist;
-                            dy = (dy / dist) * maxDist;
-                        }
+  // --- EXPLORER & PROPRIEDADES ---
+  function updateExplorer() {
+    const list = document.getElementById('explorer-list');
+    list.innerHTML = '';
 
-                        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    Object.keys(workspaceObjects).forEach(key => {
+      const item = document.createElement('div');
+      item.className = `tree-item ${selectedObjectKey === key ? 'selected' : ''}`;
+      item.innerHTML = `🧊 ${key} <span style="color:var(--text-muted);font-size:10px;">(${workspaceObjects[key].type})</span>`;
+      item.onclick = () => selectObject(key);
+      list.appendChild(item);
+    });
+  }
 
-                        let valX = dx / maxDist;
-                        let valY = dy / maxDist;
+  function selectObject(key) {
+    selectedObjectKey = key;
+    updateExplorer();
 
-                        if (isMove) {
-                            moveInput = { x: valX, y: valY };
-                        } else {
-                            lookInput = { x: valX, y: valY };
-                        }
-                    }
-                }
-            });
+    const obj = workspaceObjects[key];
+    if (!obj) return;
 
-            const resetJoystick = (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === activeTouchId) {
-                        activeTouchId = null;
-                        knob.style.transform = `translate(0px, 0px)`;
-                        if (isMove) {
-                            moveInput = { x: 0, y: 0 };
-                        } else {
-                            lookInput = { x: 0, y: 0 };
-                        }
-                    }
-                }
-            };
+    document.getElementById('prop-name').value = obj.name;
+    document.getElementById('prop-pos').value = `${obj.mesh.position.x}, ${obj.mesh.position.y}, ${obj.mesh.position.z}`;
+    document.getElementById('prop-size').value = `${obj.mesh.scale.x}, ${obj.mesh.scale.y}, ${obj.mesh.scale.z}`;
+    document.getElementById('prop-color').value = obj.color;
+    document.getElementById('prop-anchor').checked = obj.anchored;
+  }
 
-            zone.addEventListener('touchend', resetJoystick);
-            zone.addEventListener('touchcancel', resetJoystick);
-        }
+  function applyPropertyChange() {
+    if (!selectedObjectKey || !workspaceObjects[selectedObjectKey]) return;
+    const obj = workspaceObjects[selectedObjectKey];
 
-        setupJoystick('joystick-left', 'knob-left', true);
-        setupJoystick('joystick-right', 'knob-right', false);
+    // Atualiza Posição
+    const pos = document.getElementById('prop-pos').value.split(',').map(Number);
+    if (pos.length === 3) obj.mesh.position.set(pos[0], pos[1], pos[2]);
 
-        // Loop de Renderiza��o e Movimenta��o por Joystick
-        function animate() {
-            requestAnimationFrame(animate);
+    // Atualiza Tamanho
+    const size = document.getElementById('prop-size').value.split(',').map(Number);
+    if (size.length === 3) obj.mesh.scale.set(size[0], size[1], size[2]);
 
-            // Se mexer o joystick direito, rotaciona a c�mera ao redor do mundo
-            if (lookInput.x !== 0 || lookInput.y !== 0) {
-                cameraAngleX -= lookInput.x * 0.05;
-                cameraAngleY = Math.max(-1.4, Math.min(1.4, cameraAngleY - lookInput.y * 0.05));
-                updateCameraPosition();
-            }
+    // Atualiza Cor & Ancora
+    obj.color = document.getElementById('prop-color').value;
+    obj.mesh.material.color.set(obj.color);
+    obj.anchored = document.getElementById('prop-anchor').checked;
+  }
 
-            // Se houver objetos criados, o joystick esquerdo move o primeiro objeto criado
-            const firstObjName = Object.keys(worldObjects)[0];
-            if (firstObjName && (moveInput.x !== 0 || moveInput.y !== 0)) {
-                let obj = worldObjects[firstObjName];
-                obj.position.x += moveInput.x * 0.05;
-                obj.position.z += moveInput.y * 0.05;
-            }
+  // --- CONTROLE DE JOYSTICK APENAS (ESQUERDA) ---
+  let joystickData = { active: false, dx: 0, dy: 0 };
+  const zone = document.getElementById('joystick-zone');
+  const knob = document.getElementById('joystick-knob');
 
-            renderer.render(scene, camera);
-        }
-        animate();
+  zone.addEventListener('touchstart', (e) => {
+    joystickData.active = true;
+    handleJoystickMove(e.touches[0]);
+  });
 
-        window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
-    </script>
+  window.addEventListener('touchmove', (e) => {
+    if (joystickData.active) handleJoystickMove(e.touches[0]);
+  });
+
+  window.addEventListener('touchend', () => {
+    joystickData.active = false;
+    joystickData.dx = 0; joystickData.dy = 0;
+    knob.style.transform = `translate(0px, 0px)`;
+  });
+
+  function handleJoystickMove(touch) {
+    const rect = zone.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    let deltaX = touch.clientX - centerX;
+    let deltaY = touch.clientY - centerY;
+    const dist = Math.hypot(deltaX, deltaY);
+    const maxDist = 35;
+
+    if (dist > maxDist) {
+      deltaX = (deltaX / dist) * maxDist;
+      deltaY = (deltaY / dist) * maxDist;
+    }
+
+    knob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    joystickData.dx = deltaX / maxDist;
+    joystickData.dy = deltaY / maxDist;
+  }
+
+  function updateJoystickMovement() {
+    if (!joystickData.active || !selectedObjectKey) return;
+    const obj = workspaceObjects[selectedObjectKey];
+    if (obj && !obj.anchored) {
+      obj.mesh.position.x += joystickData.dx * 0.1;
+      obj.mesh.position.z += joystickData.dy * 0.1;
+      document.getElementById('prop-pos').value = `${obj.mesh.position.x.toFixed(1)}, ${obj.mesh.position.y.toFixed(1)}, ${obj.mesh.position.z.toFixed(1)}`;
+    }
+  }
+
+  // --- UTILS & MENUS ---
+  function toggleDropdown() {
+    document.getElementById('add-menu').classList.toggle('show');
+  }
+
+  function addObject(type) {
+    const name = `${type}_${Object.keys(workspaceObjects).length + 1}`;
+    createGeometry(type, name);
+    toggleDropdown();
+    logOutput(`Objeto '${name}' adicionado à cena.`, "info");
+  }
+
+  function addScript() {
+    scriptCount++;
+    logOutput(`Novo Script 'Script_${scriptCount}' adicionado ao Explorer.`, "info");
+    toggleDropdown();
+  }
+
+  function logOutput(msg, type = 'info') {
+    const logs = document.getElementById('output-logs');
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.innerText = `[C-Voxel] ${msg}`;
+    logs.appendChild(entry);
+    logs.scrollTop = logs.scrollHeight;
+  }
+
+  function switchMobileTab(tabId, btn) {
+    document.querySelectorAll('.panel-left, .panel-center, .panel-right').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+    if (tabId === 'pane-viewport') onWindowResize();
+  }
+
+  // Init
+  window.onload = () => {
+    document.getElementById('code-input').value = defaultScript;
+    initThree();
+    updateEditor();
+    runScript();
+  };
+</script>
 </body>
 </html>
