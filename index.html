@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C-Voxel 2D Engine</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: monospace;
+            text-align: center;
+            padding: 20px;
+        }
+        canvas {
+            border: 2px solid #00ff00;
+            background-color: #000000;
+            margin-top: 10px;
+            max-width: 100%;
+        }
+        .controls {
+            margin-top: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #00ff00;
+            border: none;
+            color: #000;
+            font-weight: bold;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>C-Voxel 2D Engine</h1>
+    <p>Vida: <span id="health">100</span> | Posição: <span id="pos">X: 0, Y: 0</span></p>
+
+    <!-- Tela do Jogo (Canvas) -->
+    <canvas id="gameCanvas" width="300" height="300"></canvas>
+
+    <!-- Botões de Controle na Tela (Perfeito para Celular) -->
+    <div class="controls">
+        <div><button onclick="movePlayer('up')">⬆️ Cima</button></div>
+        <div>
+            <button onclick="movePlayer('left')">⬅️ Esquerda</button>
+            <button onclick="movePlayer('right')">Direita ➡️</button>
+        </div>
+        <div><button onclick="movePlayer('down')">⬇️ Baixo</button></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const tileSize = 30; // Tamanho de cada bloco na tela
+        const gridWidth = 10;
+        const gridHeight = 10;
+
+        let player = { x: 0, y: 0, health: 100 };
+
+        function drawGame() {
+            // Limpa a tela
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Desenha a grade e o jogador
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    if (x === player.x && y === player.y) {
+                        ctx.fillStyle = '#00ff00'; // Cor do Player (Verde)
+                        ctx.fillRect(x * tileSize + 2, y * tileSize + 2, tileSize - 4, tileSize - 4);
+                    } else {
+                        ctx.strokeStyle = '#222';
+                        ctx.strokeRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+
+            // Atualiza os textos na tela
+            document.getElementById('health').innerText = player.health;
+            document.getElementById('pos').innerText = `X: ${player.x}, Y: ${player.y}`;
+        }
+
+        function movePlayer(direction) {
+            if (direction === 'right' && player.x < gridWidth - 1) player.x++;
+            if (direction === 'left' && player.x > 0) player.x--;
+            if (direction === 'up' && player.y > 0) player.y--;
+            if (direction === 'down' && player.y < gridHeight - 1) player.y++;
+            
+            drawGame();
+        }
+
+        // Desenha o jogo pela primeira vez ao carregar
+        drawGame();
+    </script>
+
+</body>
+</html>
