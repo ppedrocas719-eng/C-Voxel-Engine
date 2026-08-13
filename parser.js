@@ -1,39 +1,70 @@
-/**
- * C-Voxel Engine - parser.js
- * Interpretador oficial da linguagem C-Voxel baseado na nossa documentação e sintaxe.
- */
-
 class CVoxelParser {
     constructor() {
         this.variables = new Map();
         this.gstats = new Map();
         this.blocks = new Map();
+        
+        // Configuração do Mundo 2D
+        this.width = 10;
+        this.height = 10;
+        this.player = {
+            x: 0,
+            y: 0,
+            health: 100
+        };
     }
 
-    parse(sourceCode) {
-        const lines = sourceCode.split('\n');
-        let i = 0;
+    // Desenha o mapa 2D no terminal em formato de grade ASCII
+    renderMap() {
+        console.clear(); // Limpa a tela para dar efeito de jogo rodando
+        console.log(`=== C-VOXEL 2D ENGINE ===`);
+        console.log(`Vida: ${this.player.health} | Posição: X=${this.player.x}, Y=${this.player.y}\n`);
 
-        while (i < lines.length) {
+        for (let y = 0; y < this.height; y++) {
+            let row = "";
+            for (let x = 0; x < this.width; x++) {
+                if (x === this.player.x && y === this.player.y) {
+                    row += "[P] "; // Posição do Jogador
+                } else {
+                    row += ".   "; // Espaço vazio
+                }
+            }
+            console.log(row);
+        }
+        console.log("\n-------------------------");
+    }
+
+    parse(code) {
+        const lines = code.split('\n');
+        
+        for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
 
-            if (!line) {
-                i++;
-                continue;
-            }
-
-            // 1. Comentários: < comentário >
-            if (line.startsWith('<') && line.endsWith('>')) {
-                i++;
-                continue;
-            }
-
-            // 2. Comando Print: print("Mensagem")
-            const printMatch = line.match(/^print\s*\(\s*(['"])(.*?)\1\s*\)$/);
+            // Print simples
+            const printMatch = line.match(/^print\("(.*)"\)$/);
             if (printMatch) {
-                console.log(printMatch[2]);
-                i++;
-                continue;
+                console.log(printMatch[1]);
+            }
+
+            // Movimento do Jogador
+            const playerMoveMatch = line.match(/^player\.Move\(([a-zA-Z]+)\)$/);
+            if (playerMoveMatch) {
+                const [, direction] = playerMoveMatch;
+                const dir = direction.toLowerCase();
+
+                if (dir === 'right' && this.player.x < this.width - 1) this.player.x += 1;
+                if (dir === 'left' && this.player.x > 0) this.player.x -= 1;
+                if (dir === 'up' && this.player.y > 0) this.player.y -= 1;
+                if (dir === 'down' && this.player.y < this.height - 1) this.player.y += 1;
+
+                // Renderiza o mapa após cada movimento
+                this.renderMap();
+            }
+        }
+    }
+}
+
+module.exports = CVoxelParser;
             }
 
             // 3. Criação de Blocos: block.Create:(Formato, Nome)
