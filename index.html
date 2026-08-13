@@ -5,35 +5,302 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>C-Voxel 2D Engine</title>
     <style>
+        * { box-sizing: border-box; }
         body {
-            background-color: #121212;
+            background-color: #0f1115;
             color: #ffffff;
-            font-family: monospace;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 10px;
+        }
+        h2 { font-size: 1.1rem; margin: 0 0 10px 0; color: #00ff66; }
+        
+        /* Sistema de Abas */
+        .tabs {
+            display: flex;
+            background: #1a1d24;
+            border-radius: 8px 8px 0 0;
+            overflow: hidden;
+            border-bottom: 2px solid #2a2e39;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
             text-align: center;
-            padding: 20px;
+        }
+        .tab-btn.active {
+            background: #222730;
+            color: #00ff66;
+            border-bottom: 3px solid #00ff66;
+        }
+
+        /* Conteúdo das Abas */
+        .tab-content {
+            display: none;
+            background: #161920;
+            padding: 15px;
+            border-radius: 0 0 8px 8px;
+            min-height: 380px;
+            border: 1px solid #2a2e39;
+            border-top: none;
+        }
+        .tab-content.active { display: block; }
+
+        /* Cena / Canvas */
+        .viewport-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         canvas {
-            border: 2px solid #00ff00;
-            background-color: #000000;
-            margin-top: 10px;
+            border: 2px solid #333;
+            background-color: #050505;
+            border-radius: 4px;
             max-width: 100%;
         }
-        .controls {
-            margin-top: 15px;
+
+        /* Listas e Elementos */
+        .list-item {
+            background: #21262d;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            border-left: 4px solid #00ff66;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #00ff00;
+
+        /* Inspetor e Controles */
+        .property-group {
+            margin-bottom: 12px;
+        }
+        label { display: block; font-size: 0.8rem; color: #8b949e; margin-bottom: 4px; }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #fff;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+        textarea { height: 150px; resize: none; }
+
+        .btn-action {
+            background: #238636;
+            color: white;
             border: none;
-            color: #000;
+            padding: 10px 15px;
             font-weight: bold;
-            border-radius: 5px;
-            margin: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-action:active { background: #2ea043; }
+
+        .mobile-dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            width: 180px;
+            margin: 15px auto 0 auto;
+        }
+        .dpad-btn {
+            background: #30363d;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 1.1rem;
+            border-radius: 6px;
             cursor: pointer;
         }
+        .dpad-btn:active { background: #58a6ff; color: #000; }
     </style>
 </head>
+<body>
+
+    <!-- Navegação por Abas (Estilo It's Magic) -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-cena')">Cena</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-hierarquia')">Hierarquia</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-inspetor')">Inspetor</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-codigo')">C-Voxel</button>
+    </div>
+
+    <!-- ABAS 1: CENA (Viewport do Jogo) -->
+    <div id="tab-cena" class="tab-content active">
+        <h2>Viewport 2D</h2>
+        <div class="viewport-container">
+            <canvas id="gameCanvas" width="260" height="260"></canvas>
+            
+            <!-- Controles táteis para testar em tempo real -->
+            <div class="mobile-dpad">
+                <div></div>
+                <button class="dpad-btn" onclick="movePlayer('up')">⬆️</button>
+                <div></div>
+                <button class="dpad-btn" onclick="movePlayer('left')">⬅️</button>
+                <button class="dpad-btn" onclick="movePlayer('down')">⬇️</button>
+                <button class="dpad-btn" onclick="movePlayer('right')">➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 2: HIERARQUIA -->
+    <div id="tab-hierarquia" class="tab-content">
+        <h2>Objetos na Cena</h2>
+        <div id="hierarchy-list">
+            <div class="list-item" onclick="selectObject('Player')">
+                <span>🟢 Player (Ativo)</span>
+                <small style="color: #8b949e;">[X: 0, Y: 0]</small>
+            </div>
+            <div class="list-item" onclick="selectObject('Lava')">
+                <span>🔴 Bloco: Lava</span>
+                <small style="color: #8b949e;">[X: 4, Y: 4]</small>
+            </div>
+        </div>
+        <button class="btn-action" onclick="alert('Função para adicionar novo objeto em breve!')">+ Adicionar Objeto</button>
+    </div>
+
+    <!-- ABA 3: INSPETOR DE PROPRIEDADES -->
+    <div id="tab-inspetor" class="tab-content">
+        <h2>Inspetor: <span id="selected-obj-name" style="color: #58a6ff;">Player</span></h2>
+        <div class="property-group">
+            <label>Posição X</label>
+            <input type="number" id="prop-x" value="0" onchange="updateProperty()">
+        </div>
+        <div class="property-group">
+            <label>Posição Y</label>
+            <input type="number" id="prop-y" value="0" onchange="updateProperty()">
+        </div>
+        <div class="property-group">
+            <label>Vida (Health)</label>
+            <input type="number" id="prop-health" value="100">
+        </div>
+    </div>
+
+    <!-- ABA 4: EDITOR C-VOXEL -->
+    <div id="tab-codigo" class="tab-content">
+        <h2>Editor de Scripts C-Voxel</h2>
+        <textarea id="cvoxel-script">print("Iniciando C-Voxel...")
+player.Move(Right)
+player.Move(Right)
+player.Move(Down)</textarea>
+        <button class="btn-action" onclick="runCVoxelScript()">▶ Compilar e Executar</button>
+    </div>
+
+    <script>
+        // Sistema de Abas
+        function switchTab(evt, tabId) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(c => c.classList.remove('active'));
+            
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(b => b.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            evt.currentTarget.classList.add('active');
+            if(tabId === 'tab-cena') drawGame();
+        }
+
+        // Motor Gráfico e Estado do Jogo
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const tileSize = 26;
+        const gridWidth = 10;
+        const gridHeight = 10;
+
+        let gameWorld = {
+            player: { x: 0, y: 0, health: 100 },
+            lava: { x: 4, y: 4 }
+        };
+
+        let selectedObject = 'Player';
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    // Desenha Lava
+                    if (x === gameWorld.lava.x && y === gameWorld.lava.y) {
+                        ctx.fillStyle = '#ff4444';
+                        ctx.fillRect(x * tileSize + 2, y * tileSize + 2, tileSize - 4, tileSize - 4);
+                    } 
+                    // Desenha Player
+                    else if (x === gameWorld.player.x && y === gameWorld.player.y) {
+                        ctx.fillStyle = '#00ff66';
+                        ctx.fillRect(x * tileSize + 2, y * tileSize + 2, tileSize - 4, tileSize - 4);
+                    } 
+                    // Grid Vazio
+                    else {
+                        ctx.strokeStyle = '#1f242c';
+                        ctx.strokeRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+            // Sincroniza inputs do inspetor se selecionado
+            if(selectedObject === 'Player') {
+                document.getElementById('prop-x').value = gameWorld.player.x;
+                document.getElementById('prop-y').value = gameWorld.player.y;
+            }
+        }
+
+        function movePlayer(dir) {
+            if (dir === 'right' && gameWorld.player.x < gridWidth - 1) gameWorld.player.x++;
+            if (dir === 'left' && gameWorld.player.x > 0) gameWorld.player.x--;
+            if (dir === 'up' && gameWorld.player.y > 0) gameWorld.player.y--;
+            if (dir === 'down' && gameWorld.player.y < gridHeight - 1) gameWorld.player.y++;
+            drawGame();
+        }
+
+        function selectObject(objName) {
+            selectedObject = objName;
+            document.getElementById('selected-obj-name').innerText = objName;
+            if(objName === 'Player') {
+                document.getElementById('prop-x').value = gameWorld.player.x;
+                document.getElementById('prop-y').value = gameWorld.player.y;
+            }
+        }
+
+        function updateProperty() {
+            if(selectedObject === 'Player') {
+                gameWorld.player.x = parseInt(document.getElementById('prop-x').value) || 0;
+                gameWorld.player.y = parseInt(document.getElementById('prop-y').value) || 0;
+                drawGame();
+            }
+        }
+
+        // Interpretador Simples do C-Voxel integrado na Web
+        function runCVoxelScript() {
+            const script = document.getElementById('cvoxel-script').value;
+            const lines = script.split('\n');
+            
+            lines.forEach(line => {
+                line = line.trim();
+                if(line.startsWith('player.Move(Right)')) gameWorld.player.x = Math.min(gridWidth - 1, gameWorld.player.x + 1);
+                if(line.startsWith('player.Move(Left)')) gameWorld.player.x = Math.max(0, gameWorld.player.x - 1);
+                if(line.startsWith('player.Move(Up)')) gameWorld.player.y = Math.max(0, gameWorld.player.y - 1);
+                if(line.startsWith('player.Move(Down)')) gameWorld.player.y = Math.min(gridHeight - 1, gameWorld.player.y + 1);
+            });
+
+            alert('Script C-Voxel compilado e executado com sucesso!');
+            // Vai direto para a aba de cena para ver o resultado
+            switchTab({ currentTarget: document.querySelectorAll('.tab-btn')[0] }, 'tab-cena');
+        }
+
+        drawGame();
+    </script>
+</body>
+</html>
 <body>
 
     <h1>C-Voxel 2D Engine</h1>
