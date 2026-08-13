@@ -3,145 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>C-Voxel Engine Pro</title>
+    <title>C-Voxel Studio Pro</title>
 
-    <!-- CodeMirror (Editor de Código Profissional) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/darcula.min.css">
-    
+
     <style>
         :root {
-            --bg-base: #111111;
-            --bg-panel: #1e1e1e;
-            --bg-header: #252526;
-            --border: #333333;
-            --accent: #007acc;
+            --bg-dark: #121316;
+            --bg-panel: #1e1f24;
+            --bg-header: #18191c;
+            --border-color: #2d3037;
+            --accent-color: #007acc;
             --accent-hover: #0098ff;
-            --text: #cccccc;
-            --text-light: #ffffff;
+            --text-main: #e1e4ea;
+            --text-muted: #8b909a;
             --success: #4af626;
             --danger: #f14c4c;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; -webkit-user-select: none; }
-        
-        body { background-color: var(--bg-base); color: var(--text); overflow: hidden; display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-        /* Header / Toolbar */
-        header { display: flex; justify-content: space-between; align-items: center; padding: 0 15px; height: 40px; background: var(--bg-header); border-bottom: 1px solid var(--border); }
-        .logo { font-weight: 800; font-size: 14px; color: var(--text-light); letter-spacing: 1px; }
-        .toolbar { display: flex; gap: 8px; }
-        
-        button { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: var(--accent-hover); }
-        button.secondary { background: #3a3d41; }
-        button.secondary:hover { background: #4a4d51; }
-        button.danger { background: var(--danger); }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
 
-        /* Layout Principal */
-        .main-layout { display: flex; flex: 1; height: calc(100vh - 40px); }
+        /* Topbar Header */
+        header {
+            height: 38px;
+            background-color: var(--bg-header);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            flex-shrink: 0;
+        }
 
-        /* Painel Esquerdo (Explorer + Propriedades) */
-        .left-panel { width: 250px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
-        
-        .panel-header { background: var(--bg-header); padding: 5px 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid var(--border); border-top: 1px solid var(--border); color: #999; }
-        
-        .explorer-list { flex: 1; overflow-y: auto; padding: 5px; }
-        .hierarchy-item { padding: 6px 10px; font-size: 12px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; gap: 8px; }
-        .hierarchy-item:hover { background: rgba(255,255,255,0.05); }
-        .hierarchy-item.active { background: var(--accent); color: white; }
-        
-        .properties-panel { height: 45%; overflow-y: auto; padding: 10px; border-top: 1px solid var(--border); font-size: 11px; }
-        .prop-group { margin-bottom: 10px; }
-        .prop-group label { display: block; color: #888; margin-bottom: 4px; }
-        .prop-row { display: flex; gap: 5px; margin-bottom: 5px; }
-        .prop-row span { color: #555; width: 12px; text-align: center; line-height: 22px; }
-        .prop-input { width: 100%; background: var(--bg-base); border: 1px solid var(--border); color: var(--text-light); padding: 4px; border-radius: 3px; outline: none; text-align: center; }
-        .prop-input:focus { border-color: var(--accent); }
+        .brand {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
 
-        /* Área Central (3D Viewport) */
-        .viewport { flex: 1; position: relative; background: #000; }
-        #webgl-canvas { width: 100%; height: 100%; display: block; outline: none; }
-        
-        /* Controles Mobile na Viewport */
-        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 100; touch-action: none; }
-        #joystick-knob { width: 40px; height: 40px; background: rgba(0, 122, 204, 0.7); border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none; }
+        .toolbar-btns {
+            display: flex;
+            gap: 6px;
+        }
 
-        /* Painel Direito (Script + Console) */
-        .right-panel { width: 350px; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
-        .editor-container { flex: 1; display: flex; flex-direction: column; position: relative; }
-        .CodeMirror { flex: 1; height: 100% !important; font-size: 13px; font-family: 'Consolas', monospace; }
-        
-        .console { height: 120px; background: #0a0a0c; border-top: 1px solid var(--border); padding: 8px; font-family: 'Consolas', monospace; font-size: 11px; overflow-y: auto; color: #ccc; }
-        .log-info { color: var(--text); }
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        button:hover { background-color: var(--accent-hover); }
+        button.secondary { background-color: #33363d; }
+        button.secondary:hover { background-color: #444851; }
+        button.danger { background-color: var(--danger); }
+
+        /* Workspace Grid Layout */
+        .workspace {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Editor Pane */
+        .editor-pane {
+            width: 320px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 2;
+        }
+
+        .pane-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 6px 10px;
+            background-color: var(--bg-header);
+            border-bottom: 1px solid var(--border-color);
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .CodeMirror {
+            flex: 1;
+            height: 100% !important;
+            font-size: 12px;
+        }
+
+        /* Viewport 3D */
+        .viewport-pane {
+            flex: 1;
+            position: relative;
+            background-color: #0d0e11;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            outline: none;
+        }
+
+        /* Console Output */
+        .output-box {
+            height: 90px;
+            background-color: #08090b;
+            border-top: 1px solid var(--border-color);
+            padding: 6px 8px;
+            font-size: 10px;
+            font-family: monospace;
+            overflow-y: auto;
+        }
+
+        .log-info { color: var(--text-main); }
         .log-success { color: var(--success); }
         .log-error { color: var(--danger); }
 
-        /* Responsividade para Celular Deitado */
-        @media (max-width: 900px) {
-            .left-panel { width: 180px; }
-            .right-panel { width: 250px; }
-            #joystick-zone { width: 80px; height: 80px; bottom: 10px; left: 10px; }
-            #joystick-knob { width: 35px; height: 35px; }
+        /* Painel Inspector / Explorer */
+        .right-pane {
+            width: 220px;
+            background-color: var(--bg-panel);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 2;
+            font-size: 11px;
+        }
+
+        .explorer-section, .properties-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .tree-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tree-item:hover { background-color: rgba(255,255,255,0.05); }
+        .tree-item.selected { background-color: var(--accent-color); color: #fff; }
+
+        .prop-container { padding: 8px; }
+        .prop-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .prop-label { color: var(--text-muted); font-size: 10px; }
+        .prop-row input {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 3px 5px;
+            font-size: 10px;
+            width: 55px;
+            border-radius: 3px;
+            text-align: center;
+        }
+
+        /* Joystick Mobile */
+        #joystickBase {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 85px;
+            height: 85px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            z-index: 100;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #joystickKnob {
+            width: 35px;
+            height: 35px;
+            background: rgba(0, 122, 204, 0.85);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        /* Ajuste de Tela para Celular */
+        @media (max-width: 800px) {
+            .editor-pane { width: 38%; }
+            .right-pane { width: 28%; }
+            #joystickBase { width: 70px; height: 70px; bottom: 12px; left: 12px; }
+            #joystickKnob { width: 30px; height: 30px; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">C-VOXEL PRO</div>
-        <div class="toolbar">
+        <div class="brand">C-VOXEL STUDIO</div>
+        <div class="toolbar-btns">
             <button class="secondary" onclick="engine.resetCamera()">Reset Cam</button>
-            <button class="danger" onclick="engine.clearScene()">Limpar Cena</button>
-            <button onclick="engine.compileAndRun()"> Compilar Script</button>
+            <button class="danger" onclick="engine.clearScene()">Limpar</button>
+            <button onclick="engine.compileAndRun()">â–¶ Executar</button>
         </div>
     </header>
 
-    <div class="main-layout">
-        <!-- Explorer e Propriedades -->
-        <div class="left-panel">
-            <div class="panel-header">Hierarchy</div>
-            <div class="explorer-list" id="ui-hierarchy"></div>
-            
-            <div class="panel-header">Inspector</div>
-            <div class="properties-panel" id="ui-inspector">
-                <div style="color: #666; text-align: center; margin-top: 20px;">Nenhum objeto selecionado</div>
-            </div>
-        </div>
+    <div class="workspace">
+        <div class="editor-pane">
+            <div class="pane-title">Script Principal</div>
+            <textarea id="codeEditor">
+// Criando objetos no C-Voxel
+block.Create(Wedge, MinhaCunha);
+MinhaCunha.Color = #FF5733;
+MinhaCunha.Position = 0, 0.5, 0;
 
-        <!-- 3D Viewport -->
-        <div class="viewport" id="viewport">
-            <canvas id="webgl-canvas"></canvas>
-            <div id="joystick-zone"><div id="joystick-knob"></div></div>
-        </div>
-
-        <!-- Editor de Script e Console -->
-        <div class="right-panel">
-            <div class="panel-header">Scripting (C-Voxel)</div>
-            <div class="editor-container">
-                <textarea id="code-editor">
-// C-Voxel Engine Pro - Init
-block.Create(Cube, Player);
-Player.Color = #007acc;
-Player.Position = 0, 0.5, 0;
-
-block.Create(Cylinder, ArvoreTronco);
-ArvoreTronco.Color = #8B4513;
-ArvoreTronco.Position = 3, 0.5, -3;
-ArvoreTronco.Scale = 0.5, 1, 0.5;
-
-block.Create(Sphere, ArvoreFolhas);
-ArvoreFolhas.Color = #228B22;
-ArvoreFolhas.Position = 3, 1.5, -3;
-ArvoreFolhas.Scale = 1.5, 1.5, 1.5;
+block.Create(Cube, MeuBloco);
+MeuBloco.Color = #007ACC;
+MeuBloco.Position = 2, 0.5, 0;
 </textarea>
+            <div class="pane-title">Console Output</div>
+            <div class="output-box" id="consoleOutput"></div>
+        </div>
+
+        <div class="viewport-pane" id="viewport">
+            <canvas id="renderCanvas"></canvas>
+            <div id="joystickBase"><div id="joystickKnob"></div></div>
+        </div>
+
+        <div class="right-pane">
+            <div class="pane-title">Explorer</div>
+            <div class="explorer-section" id="hierarchyList"></div>
+
+            <div class="pane-title">Propriedades</div>
+            <div class="properties-section" id="inspectorPanel">
+                <div style="color: #666; text-align: center; margin-top: 15px; font-size: 10px;">
+                    Selecione um objeto
+                </div>
             </div>
-            <div class="panel-header">Console Output</div>
-            <div class="console" id="ui-console"></div>
         </div>
     </div>
 
-    <!-- Bibliotecas da Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
@@ -150,90 +283,71 @@ ArvoreFolhas.Scale = 1.5, 1.5, 1.5;
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
 
     <script>
-        // ==========================================
-        // C-VOXEL ENGINE CORE
-        // ==========================================
         class CVoxelEngine {
             constructor() {
                 this.objects = new Map();
                 this.selectedObject = null;
                 this.joyX = 0;
                 this.joyY = 0;
-                
+
                 this.initUI();
                 this.init3D();
-                this.initInput();
+                this.initControls();
                 this.log("Engine inicializada com sucesso.", "success");
             }
 
             initUI() {
-                // Setup CodeMirror
-                this.editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+                this.editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
                     mode: "javascript",
                     theme: "darcula",
                     lineNumbers: true,
-                    tabSize: 4,
-                    indentWithTabs: true
+                    tabSize: 2
                 });
 
-                this.domHierarchy = document.getElementById('ui-hierarchy');
-                this.domInspector = document.getElementById('ui-inspector');
-                this.domConsole = document.getElementById('ui-console');
+                this.domHierarchy = document.getElementById('hierarchyList');
+                this.domInspector = document.getElementById('inspectorPanel');
+                this.domConsole = document.getElementById('consoleOutput');
             }
 
             init3D() {
-                const canvas = document.getElementById('webgl-canvas');
+                const canvas = document.getElementById('renderCanvas');
                 const container = document.getElementById('viewport');
 
-                // Scene & Camera
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x111111);
-                this.scene.fog = new THREE.Fog(0x111111, 10, 50);
+                this.scene.background = new THREE.Color(0x121316);
 
                 this.camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-                this.camera.position.set(0, 8, 12);
+                this.camera.position.set(0, 6, 10);
 
-                // Renderer
                 this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
                 this.renderer.setSize(container.clientWidth, container.clientHeight);
                 this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                this.renderer.shadowMap.enabled = true;
-                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-                // Lights
-                const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+                const ambient = new THREE.AmbientLight(0xffffff, 0.7);
                 this.scene.add(ambient);
-                
+
                 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                dirLight.position.set(10, 20, 10);
-                dirLight.castShadow = true;
-                dirLight.shadow.mapSize.width = 1024;
-                dirLight.shadow.mapSize.height = 1024;
+                dirLight.position.set(5, 10, 7);
                 this.scene.add(dirLight);
 
-                // Environment (Grid & Axes)
-                const grid = new THREE.GridHelper(40, 40, 0x444444, 0x222222);
+                const grid = new THREE.GridHelper(30, 30, 0x33363d, 0x22242a);
                 grid.position.y = -0.01;
                 this.scene.add(grid);
 
-                // Controls
                 this.orbit = new THREE.OrbitControls(this.camera, this.renderer.domElement);
                 this.orbit.enableDamping = true;
                 this.orbit.dampingFactor = 0.05;
-                this.orbit.maxPolarAngle = Math.PI / 2; // Não deixa ir debaixo da terra
 
-                this.transformControl = new THREE.TransformControls(this.camera, this.renderer.domElement);
-                this.transformControl.addEventListener('dragging-changed', (event) => {
-                    this.orbit.enabled = !event.value;
+                this.transform = new THREE.TransformControls(this.camera, this.renderer.domElement);
+                this.transform.addEventListener('dragging-changed', (e) => {
+                    this.orbit.enabled = !e.value;
                 });
-                this.transformControl.addEventListener('change', () => this.updateInspectorFromObject());
-                this.scene.add(this.transformControl);
+                this.transform.addEventListener('change', () => this.updateInspector());
+                this.scene.add(this.transform);
 
-                // Raycaster
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
 
-                // Resize Event
                 window.addEventListener('resize', () => {
                     this.camera.aspect = container.clientWidth / container.clientHeight;
                     this.camera.updateProjectionMatrix();
@@ -243,87 +357,74 @@ ArvoreFolhas.Scale = 1.5, 1.5, 1.5;
                 this.animate();
             }
 
-            initInput() {
-                // Raycasting (Seleção por clique)
-                const canvas = document.getElementById('webgl-canvas');
+            initControls() {
+                const canvas = document.getElementById('renderCanvas');
                 canvas.addEventListener('pointerdown', (e) => {
-                    if(e.button !== 0 && e.pointerType === 'mouse') return; // Apenas clique esquerdo ou touch
-                    
                     const rect = canvas.getBoundingClientRect();
                     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
                     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
                     this.raycaster.setFromCamera(this.mouse, this.camera);
-                    
-                    // Pegar apenas os meshes criados pelo usuario
                     const interactables = Array.from(this.objects.values()).map(o => o.mesh);
                     const intersects = this.raycaster.intersectObjects(interactables);
 
                     if (intersects.length > 0) {
-                        const clickedMesh = intersects[0].object;
-                        // Encontrar o nome do objeto
+                        const target = intersects[0].object;
                         for (let [name, obj] of this.objects.entries()) {
-                            if (obj.mesh === clickedMesh) {
+                            if (obj.mesh === target) {
                                 this.selectObject(name);
                                 break;
                             }
                         }
-                    } else if (!this.transformControl.dragging) {
-                        this.deselect();
                     }
                 });
 
                 // Joystick Setup
-                const zone = document.getElementById('joystick-zone');
-                const knob = document.getElementById('joystick-knob');
-                let pid = null;
-                const maxDist = 30;
+                const base = document.getElementById('joystickBase');
+                const knob = document.getElementById('joystickKnob');
+                let activeId = null;
 
-                zone.addEventListener('pointerdown', (e) => {
-                    e.stopPropagation();
-                    pid = e.pointerId;
-                    zone.setPointerCapture(pid);
+                base.addEventListener('pointerdown', (e) => {
+                    activeId = e.pointerId;
+                    base.setPointerCapture(activeId);
                 });
 
-                zone.addEventListener('pointermove', (e) => {
-                    if (pid !== e.pointerId) return;
-                    e.stopPropagation();
-                    const rect = zone.getBoundingClientRect();
-                    const cx = rect.left + rect.width / 2;
-                    const cy = rect.top + rect.height / 2;
-                    let dx = e.clientX - cx;
-                    let dy = e.clientY - cy;
-                    
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist > maxDist) { dx = (dx/dist)*maxDist; dy = (dy/dist)*maxDist; }
-                    
+                base.addEventListener('pointermove', (e) => {
+                    if (activeId !== e.pointerId) return;
+                    const rect = base.getBoundingClientRect();
+                    let dx = e.clientX - (rect.left + rect.width / 2);
+                    let dy = e.clientY - (rect.top + rect.height / 2);
+                    const dist = Math.hypot(dx, dy);
+                    const maxDist = 25;
+
+                    if (dist > maxDist) {
+                        dx = (dx / dist) * maxDist;
+                        dy = (dy / dist) * maxDist;
+                    }
+
                     knob.style.transform = `translate(${dx}px, ${dy}px)`;
                     this.joyX = dx / maxDist;
                     this.joyY = dy / maxDist;
                 });
 
-                const resetJoy = (e) => {
-                    if (pid === e.pointerId) {
-                        pid = null;
+                const releaseJoy = (e) => {
+                    if (activeId === e.pointerId) {
+                        activeId = null;
                         knob.style.transform = `translate(0px, 0px)`;
                         this.joyX = 0;
                         this.joyY = 0;
                     }
                 };
 
-                zone.addEventListener('pointerup', resetJoy);
-                zone.addEventListener('pointercancel', resetJoy);
+                base.addEventListener('pointerup', releaseJoy);
+                base.addEventListener('pointercancel', releaseJoy);
             }
 
-            // ==========================================
-            // CORE LOGIC & PARSER
-            // ==========================================
-            
             log(msg, type = 'info') {
-                const span = document.createElement('div');
-                span.className = `log-${type}`;
-                span.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-                this.domConsole.appendChild(span);
+                const div = document.createElement('div');
+                div.className = `log-${type}`;
+                div.innerText = `> ${msg}`;
+                this.domConsole.appendChild(div);
                 this.domConsole.scrollTop = this.domConsole.scrollHeight;
             }
 
@@ -340,35 +441,31 @@ ArvoreFolhas.Scale = 1.5, 1.5, 1.5;
             }
 
             resetCamera() {
-                this.camera.position.set(0, 8, 12);
-                this.orbit.target.set(0,0,0);
+                this.camera.position.set(0, 6, 10);
+                this.orbit.target.set(0, 0, 0);
             }
 
             compileAndRun() {
                 this.clearScene();
                 const code = this.editor.getValue();
                 const lines = code.split('\n');
-                this.log("Compilando script...", "info");
 
                 try {
-                    lines.forEach((line, index) => {
+                    lines.forEach((line) => {
                         line = line.trim();
                         if (!line || line.startsWith('//')) return;
 
-                        // block.Create(Type, Name)
                         const createMatch = line.match(/block\.Create\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)/i);
                         if (createMatch) {
                             this.instantiate(createMatch[1], createMatch[2]);
                             return;
                         }
 
-                        // Parse properties: Object.Property = Value
                         const propMatch = line.match(/(\w+)\.(\w+)\s*=\s*(.+)/);
                         if (propMatch) {
                             const objName = propMatch[1];
                             const prop = propMatch[2];
                             const val = propMatch[3].replace(';', '').trim();
-                            
                             if (this.objects.has(objName)) {
                                 this.applyProperty(this.objects.get(objName), prop, val);
                             }
@@ -376,159 +473,114 @@ ArvoreFolhas.Scale = 1.5, 1.5, 1.5;
                     });
 
                     this.refreshHierarchy();
-                    // Seleciona o primeiro objeto automaticamente
-                    if(this.objects.size > 0) {
+                    if (this.objects.size > 0) {
                         this.selectObject(this.objects.keys().next().value);
                     }
-                    this.log("Build concluída sem erros.", "success");
-                } catch (e) {
-                    this.log(`Erro fatal de compilação: ${e.message}`, "error");
+                    this.log("Executado com sucesso!", "success");
+                } catch (err) {
+                    this.log(`Erro no script: ${err.message}`, "error");
                 }
             }
 
             instantiate(type, name) {
                 let geo;
-                switch(type.toLowerCase()) {
-                    case 'cube': geo = new THREE.BoxGeometry(1,1,1); break;
-                    case 'sphere': geo = new THREE.SphereGeometry(0.5, 32, 32); break;
-                    case 'cylinder': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 32); break;
-                    case 'wedge': 
-                        geo = new THREE.BufferGeometry();
-                        const v = new Float32Array([-0.5,-0.5,0.5, 0.5,-0.5,0.5, 0.5,-0.5,-0.5, -0.5,-0.5,-0.5, -0.5,0.5,-0.5, 0.5,0.5,-0.5]);
-                        const i = [0,1,4, 1,5,4, 3,2,1, 3,1,0, 3,0,4, 2,5,1, 3,4,5, 3,5,2];
-                        geo.setAttribute('position', new THREE.BufferAttribute(v, 3));
-                        geo.setIndex(i);
-                        geo.computeVertexNormals();
-                        break;
-                    default: geo = new THREE.BoxGeometry(1,1,1);
+                const t = type.toLowerCase();
+                if (t === 'cube' || t === 'block') geo = new THREE.BoxGeometry(1, 1, 1);
+                else if (t === 'sphere') geo = new THREE.SphereGeometry(0.5, 32, 32);
+                else if (t === 'cylinder') geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+                else if (t === 'wedge') {
+                    geo = new THREE.BufferGeometry();
+                    const v = new Float32Array([-0.5,-0.5,0.5, 0.5,-0.5,0.5, 0.5,-0.5,-0.5, -0.5,-0.5,-0.5, -0.5,0.5,-0.5, 0.5,0.5,-0.5]);
+                    const idx = [0,1,4, 1,5,4, 3,2,1, 3,1,0, 3,0,4, 2,5,1, 3,4,5, 3,5,2];
+                    geo.setAttribute('position', new THREE.BufferAttribute(v, 3));
+                    geo.setIndex(idx);
+                    geo.computeVertexNormals();
+                } else {
+                    geo = new THREE.BoxGeometry(1, 1, 1);
                 }
 
-                const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.1, side: THREE.DoubleSide });
+                const mat = new THREE.MeshStandardMaterial({ color: 0x007acc, roughness: 0.4 });
                 const mesh = new THREE.Mesh(geo, mat);
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                
                 this.scene.add(mesh);
+
                 this.objects.set(name, { name, mesh, type });
             }
 
             applyProperty(obj, prop, val) {
-                if (prop.toLowerCase() === 'color') {
+                const p = prop.toLowerCase();
+                if (p === 'color') {
                     obj.mesh.material.color.set(val);
-                } 
-                else if (['position', 'scale', 'rotation'].includes(prop.toLowerCase())) {
+                } else if (['position', 'scale', 'rotation'].includes(p)) {
                     const parts = val.split(',').map(n => parseFloat(n.trim()));
                     if (parts.length === 3) {
-                        if (prop.toLowerCase() === 'position') obj.mesh.position.set(...parts);
-                        if (prop.toLowerCase() === 'scale') obj.mesh.scale.set(...parts);
-                        if (prop.toLowerCase() === 'rotation') {
-                            // Converte graus para radianos para facilitar pro usuario
-                            obj.mesh.rotation.set(parts[0]*Math.PI/180, parts[1]*Math.PI/180, parts[2]*Math.PI/180);
-                        }
+                        if (p === 'position') obj.mesh.position.set(...parts);
+                        if (p === 'scale') obj.mesh.scale.set(...parts);
+                        if (p === 'rotation') obj.mesh.rotation.set(parts[0]*Math.PI/180, parts[1]*Math.PI/180, parts[2]*Math.PI/180);
                     }
                 }
             }
 
-            // ==========================================
-            // UI UPDATES & INTERACTION
-            // ==========================================
-
             refreshHierarchy() {
                 this.domHierarchy.innerHTML = '';
                 this.objects.forEach((obj, name) => {
-                    const div = document.createElement('div');
-                    div.className = `hierarchy-item ${this.selectedObject === obj ? 'active' : ''}`;
-                    div.innerHTML = ` ${name}`;
-                    div.onclick = () => this.selectObject(name);
-                    this.domHierarchy.appendChild(div);
+                    const item = document.createElement('div');
+                    item.className = `tree-item ${this.selectedObject === obj ? 'selected' : ''}`;
+                    item.innerHTML = `ðŸ§Š ${name}`;
+                    item.onclick = () => this.selectObject(name);
+                    this.domHierarchy.appendChild(item);
                 });
             }
 
             selectObject(name) {
                 if (!this.objects.has(name)) return;
                 this.selectedObject = this.objects.get(name);
-                this.transformControl.attach(this.selectedObject.mesh);
+                this.transform.attach(this.selectedObject.mesh);
                 this.refreshHierarchy();
-                this.updateInspectorFromObject();
+                this.updateInspector();
             }
 
             deselect() {
                 this.selectedObject = null;
-                this.transformControl.detach();
+                this.transform.detach();
                 this.refreshHierarchy();
-                this.domInspector.innerHTML = `<div style="color: #666; text-align: center; margin-top: 20px;">Nenhum objeto selecionado</div>`;
+                this.domInspector.innerHTML = `<div style="color: #666; text-align: center; margin-top: 15px; font-size: 10px;">Selecione um objeto</div>`;
             }
 
-            updateInspectorFromObject() {
+            updateInspector() {
                 if (!this.selectedObject) return;
                 const m = this.selectedObject.mesh;
-                const radToDeg = 180 / Math.PI;
-
                 this.domInspector.innerHTML = `
-                    <div style="margin-bottom: 15px; font-weight: bold; color: var(--accent);">
-                         ${this.selectedObject.name} <span style="color:#666; font-size:9px;">(${this.selectedObject.type})</span>
-                    </div>
-                    
-                    <div class="prop-group">
-                        <label>Transform (Position)</label>
-                        <div class="prop-row">
-                            <span style="color:#ff5555">X</span><input class="prop-input" type="number" step="0.1" value="${m.position.x.toFixed(2)}" onchange="engine.updateProp('position','x',this.value)">
-                            <span style="color:#55ff55">Y</span><input class="prop-input" type="number" step="0.1" value="${m.position.y.toFixed(2)}" onchange="engine.updateProp('position','y',this.value)">
-                            <span style="color:#5555ff">Z</span><input class="prop-input" type="number" step="0.1" value="${m.position.z.toFixed(2)}" onchange="engine.updateProp('position','z',this.value)">
-                        </div>
-                    </div>
-
-                    <div class="prop-group">
-                        <label>Rotation (Degrees)</label>
-                        <div class="prop-row">
-                            <span style="color:#ff5555">X</span><input class="prop-input" type="number" step="5" value="${(m.rotation.x * radToDeg).toFixed(1)}" onchange="engine.updateProp('rotation','x',this.value)">
-                            <span style="color:#55ff55">Y</span><input class="prop-input" type="number" step="5" value="${(m.rotation.y * radToDeg).toFixed(1)}" onchange="engine.updateProp('rotation','y',this.value)">
-                            <span style="color:#5555ff">Z</span><input class="prop-input" type="number" step="5" value="${(m.rotation.z * radToDeg).toFixed(1)}" onchange="engine.updateProp('rotation','z',this.value)">
-                        </div>
-                    </div>
-                    
-                    <div class="prop-group">
-                        <label>Scale</label>
-                        <div class="prop-row">
-                            <span style="color:#ccc">X</span><input class="prop-input" type="number" step="0.1" value="${m.scale.x.toFixed(2)}" onchange="engine.updateProp('scale','x',this.value)">
-                            <span style="color:#ccc">Y</span><input class="prop-input" type="number" step="0.1" value="${m.scale.y.toFixed(2)}" onchange="engine.updateProp('scale','y',this.value)">
-                            <span style="color:#ccc">Z</span><input class="prop-input" type="number" step="0.1" value="${m.scale.z.toFixed(2)}" onchange="engine.updateProp('scale','z',this.value)">
-                        </div>
+                    <div class="prop-container">
+                        <div style="font-weight:bold; margin-bottom:10px; color:var(--accent-color);">ðŸ“¦ ${this.selectedObject.name}</div>
+                        <div class="prop-row"><span class="prop-label">Pos X</span><input type="number" step="0.1" value="${m.position.x.toFixed(2)}" onchange="engine.setPos('x',this.value)"></div>
+                        <div class="prop-row"><span class="prop-label">Pos Y</span><input type="number" step="0.1" value="${m.position.y.toFixed(2)}" onchange="engine.setPos('y',this.value)"></div>
+                        <div class="prop-row"><span class="prop-label">Pos Z</span><input type="number" step="0.1" value="${m.position.z.toFixed(2)}" onchange="engine.setPos('z',this.value)"></div>
                     </div>
                 `;
             }
 
-            updateProp(type, axis, val) {
-                if (!this.selectedObject) return;
-                const v = parseFloat(val);
-                if (type === 'rotation') {
-                    this.selectedObject.mesh.rotation[axis] = v * (Math.PI / 180);
-                } else {
-                    this.selectedObject.mesh[type][axis] = v;
+            setPos(axis, val) {
+                if (this.selectedObject) {
+                    this.selectedObject.mesh.position[axis] = parseFloat(val);
                 }
             }
 
             animate() {
                 requestAnimationFrame(() => this.animate());
 
-                // Lógica de Movimentação pelo Joystick (Move relativo à câmera)
                 if (this.selectedObject && (this.joyX !== 0 || this.joyY !== 0)) {
-                    const speed = 0.1;
-                    
-                    // Pegar a direção que a câmera tá olhando (projetada no eixo XZ pra não voar)
-                    let camForward = new THREE.Vector3();
-                    this.camera.getWorldDirection(camForward);
-                    camForward.y = 0; 
-                    camForward.normalize();
+                    const speed = 0.08;
+                    let forward = new THREE.Vector3();
+                    this.camera.getWorldDirection(forward);
+                    forward.y = 0;
+                    forward.normalize();
 
-                    let camRight = new THREE.Vector3();
-                    camRight.crossVectors(this.camera.up, camForward).normalize();
+                    let right = new THREE.Vector3();
+                    right.crossVectors(this.camera.up, forward).normalize();
 
-                    // Aplicar o movimento do joystick nesses vetores
-                    this.selectedObject.mesh.position.addScaledVector(camRight, this.joyX * speed);
-                    this.selectedObject.mesh.position.addScaledVector(camForward, -this.joyY * speed);
-                    
-                    this.updateInspectorFromObject(); // Atualiza a UI visualmente
+                    this.selectedObject.mesh.position.addScaledVector(right, this.joyX * speed);
+                    this.selectedObject.mesh.position.addScaledVector(forward, -this.joyY * speed);
+                    this.updateInspector();
                 }
 
                 this.orbit.update();
@@ -536,12 +588,8 @@ ArvoreFolhas.Scale = 1.5, 1.5, 1.5;
             }
         }
 
-        // Inicia a Engine globalmente
         const engine = new CVoxelEngine();
-        
-        // Roda o script padrão ao iniciar a página
-        setTimeout(() => engine.compileAndRun(), 500);
-
+        setTimeout(() => engine.compileAndRun(), 300);
     </script>
 </body>
 </html>
