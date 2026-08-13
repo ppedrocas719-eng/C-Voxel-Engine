@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C-Voxel Engine</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1e1e1e;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #editor-container {
+            width: 35%;
+            display: flex;
+            flex-direction: column;
+            background: #252526;
+            border-right: 2px solid #333;
+            z-index: 10;
+        }
+        #toolbar {
+            padding: 10px;
+            background: #2d2d30;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3f3f46;
+        }
+        #toolbar h2 {
+            margin: 0;
+            font-size: 16px;
+            color: #4EC9B0;
+        }
+        #run-btn {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #run-btn:hover {
+            background: #1177bb;
+        }
+        #code-editor {
+            flex: 1;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            padding: 15px;
+            border: none;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+        #game-container {
+            flex: 65%;
+            position: relative;
+        }
+        #console-log {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 90px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-y: auto;
+            color: #9cdcfe;
+            pointer-events: none;
+        }
+        /* Estilos dos Joysticks Virtuais Mobile */
+        .joystick-zone {
+            position: absolute;
+            bottom: 30px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            touch-action: none;
+            z-index: 5;
+        }
+        #joystick-left { left: 30px; }
+        #joystick-right { right: 30px; }
+        
+        .joystick-knob {
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. EDITOR -->
+    <div id="editor-container">
+        <div id="toolbar">
+            <h2>C-Voxel Studio</h2>
+            <button id="run-btn" onclick="runCVoxelCode()"> Rodar Jogo</button>
+        </div>
+        <textarea id="code-editor" placeholder="Escreva seu código C-Voxel aqui...">
+<Criando e testando a cunha e cor>
+block.Create:(Wedge, MinhaCunha)
+block.Color:(MinhaCunha) = #FF5733
+        </textarea>
+    </div>
+
+    <!-- 2. TELA 3D & CONTROLES MOBILE -->
+    <div id="game-container">
+        <div id="console-log">[C-Voxel System] Engine pronta.</div>
+        
+        <!-- Joystick Esquerdo (Movimento) -->
+        <div id="joystick-left" class="joystick-zone">
+            <div id="knob-left" class="joystick-knob"></div>
+        </div>
+
+        <!-- Joystick Direito (Câmera) -->
+        <div id="joystick-right" class="joystick-zone">
+            <div id="knob-right" class="joystick-knob"></div>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 3, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // Luzes
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        let worldObjects = {};
+        
+        // Controle de Câmera Órbita Manual para Toque
+        let cameraAngleX = 0;
+        let cameraAngleY = 0.5;
+        let cameraDistance = 5;
+
+        function updateCameraPosition() {
+            camera.position.x = cameraDistance * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
+            camera.position.y = cameraDistance * Math.sin(cameraAngleY);
+            camera.position.z = cameraDistance * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
+            camera.lookAt(0, 0, 0);
+        }
+        updateCameraPosition();
+
+        function logToConsole(message) {
+            const consoleBox = document.getElementById('console-log');
+            consoleBox.innerHTML += `<br>> ${message}`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        // Interpretador C-Voxel com Suporte a Wedge
+        function runCVoxelCode() {
+            Object.values(worldObjects).forEach(obj => scene.remove(obj));
+            worldObjects = {};
+            
+            const code = document.getElementById('code-editor').value;
+            const lines = code.split('\n');
+
+            logToConsole("Iniciando compilação C-Voxel...");
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+
+                if (line.startsWith('<') && line.endsWith('>')) continue;
+
+                // block.Create:(Formato, Nome)
+                if (line.startsWith('block.Create:')) {
+                    let match = line.match(/block\.Create:\(([^,]+),\s*([^\)]+)\)/);
+                    if (match) {
+                        let type = match[1].trim();
+                        let name = match[2].trim();
+
+                        let geometry;
+                        if (type === 'Square') {
+                            geometry = new THREE.BoxGeometry(1, 1, 1);
+                        } else if (type === 'Sphere') {
+                            geometry = new THREE.SphereGeometry(0.6, 32, 32);
+                        } else if (type === 'Cylinder') {
+                            geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+                        } else if (type === 'Wedge') {
+                            // Criando formato de Cunha (Wedge) customizado em 3D
+                            geometry = new THREE.BufferGeometry();
+                            const vertices = new Float32Array([
+                                -0.5, -0.5,  0.5, // 0
+                                 0.5, -0.5,  0.5, // 1
+                                 0.5, -0.5, -0.5, // 2
+                                -0.5, -0.5, -0.5, // 3
+                                -0.5,  0.5, -0.5, // 4
+                                 0.5,  0.5, -0.5  // 5
+                            ]);
+                            const indices = [
+                                2, 1, 0,  3, 2, 0, // Base
+                                3, 4, 5,  3, 5, 2, // Traseira
+                                0, 4, 3,           // Esquerda
+                                1, 5, 4,  1, 4, 0, // Rampa inclinada
+                                5, 2, 3,  5, 3, 4  // Topo/Lateral fechamento
+                            ];
+                            geometry.setIndex(indices);
+                            geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                            geometry.computeVertexNormals();
+                        } else {
+                            geometry = new THREE.BoxGeometry(1, 1, 1);
+                        }
+
+                        let material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                        let mesh = new THREE.Mesh(geometry, material);
+                        
+                        scene.add(mesh);
+                        worldObjects[name] = mesh;
+                        logToConsole(`Bloco criado: [${type}] '${name}'`);
+                    }
+                }
+
+                // block.Color:(Nome) = #HEX
+                if (line.includes('block.Color:')) {
+                    let match = line.match(/block\.Color:\(([^\)]+)\)\s*=\s*(#[\da-fA-F]{6})/);
+                    if (match) {
+                        let name = match[1].trim();
+                        let colorHex = match[2].trim();
+
+                        if (worldObjects[name]) {
+                            worldObjects[name].material.color.set(colorHex);
+                            logToConsole(`Cor aplicada: ${colorHex} em '${name}'`);
+                        } else {
+                            logToConsole(`Erro: Objeto '${name}' não achado.`);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Lógica dos Joysticks de Toque na Tela
+        let moveInput = { x: 0, y: 0 };
+        let lookInput = { x: 0, y: 0 };
+
+        function setupJoystick(zoneId, knobId, isMove) {
+            const zone = document.getElementById(zoneId);
+            const knob = document.getElementById(knobId);
+            let activeTouchId = null;
+            let center = { x: 0, y: 0 };
+
+            zone.addEventListener('touchstart', (e) => {
+                const touch = e.changedTouches[0];
+                activeTouchId = touch.identifier;
+                const rect = zone.getBoundingClientRect();
+                center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+            });
+
+            zone.addEventListener('touchmove', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === activeTouchId) {
+                        let dx = touch.clientX - center.x;
+                        let dy = touch.clientY - center.y;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        let maxDist = 40;
+
+                        if (dist > maxDist) {
+                            dx = (dx / dist) * maxDist;
+                            dy = (dy / dist) * maxDist;
+                        }
+
+                        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+                        let valX = dx / maxDist;
+                        let valY = dy / maxDist;
+
+                        if (isMove) {
+                            moveInput = { x: valX, y: valY };
+                        } else {
+                            lookInput = { x: valX, y: valY };
+                        }
+                    }
+                }
+            });
+
+            const resetJoystick = (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === activeTouchId) {
+                        activeTouchId = null;
+                        knob.style.transform = `translate(0px, 0px)`;
+                        if (isMove) {
+                            moveInput = { x: 0, y: 0 };
+                        } else {
+                            lookInput = { x: 0, y: 0 };
+                        }
+                    }
+                }
+            };
+
+            zone.addEventListener('touchend', resetJoystick);
+            zone.addEventListener('touchcancel', resetJoystick);
+        }
+
+        setupJoystick('joystick-left', 'knob-left', true);
+        setupJoystick('joystick-right', 'knob-right', false);
+
+        // Loop de Renderização e Movimentação por Joystick
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Se mexer o joystick direito, rotaciona a câmera ao redor do mundo
+            if (lookInput.x !== 0 || lookInput.y !== 0) {
+                cameraAngleX -= lookInput.x * 0.05;
+                cameraAngleY = Math.max(-1.4, Math.min(1.4, cameraAngleY - lookInput.y * 0.05));
+                updateCameraPosition();
+            }
+
+            // Se houver objetos criados, o joystick esquerdo move o primeiro objeto criado
+            const firstObjName = Object.keys(worldObjects)[0];
+            if (firstObjName && (moveInput.x !== 0 || moveInput.y !== 0)) {
+                let obj = worldObjects[firstObjName];
+                obj.position.x += moveInput.x * 0.05;
+                obj.position.z += moveInput.y * 0.05;
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>
