@@ -5,35 +5,316 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>C-Voxel 2D Engine</title>
     <style>
-        * { box-sizing: border-box; }
-        body {
-            background-color: #0f1115;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 10px;
-        }
-        h2 { font-size: 1.1rem; margin: 0 0 10px 0; color: #00ff66; }
-        
-        /* Sistema de Abas */
-        .tabs {
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #181a1f; color: #abb2bf; height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 12px; }
+
+        /* Barra Superior (Toolbar) */
+        .topbar {
+            background-color: #21252b;
+            height: 40px;
             display: flex;
-            background: #1a1d24;
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-            border-bottom: 2px solid #2a2e39;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            border-bottom: 1px solid #181a1f;
         }
-        .tab-btn {
-            flex: 1;
-            padding: 12px 5px;
-            background: none;
-            border: none;
-            color: #8b949e;
-            font-weight: bold;
-            font-size: 0.85rem;
+        .topbar-left, .topbar-right { display: flex; gap: 5px; align-items: center; }
+        .tool-btn {
+            background: #282c34;
+            border: 1px solid #3e4452;
+            color: #abb2bf;
+            padding: 5px 10px;
+            border-radius: 4px;
             cursor: pointer;
-            text-align: center;
+            font-size: 11px;
         }
+        .tool-btn.play { background-color: #238636; color: #fff; border-color: #2ea043; font-weight: bold; }
+        .tool-btn:active { background: #3e4452; }
+
+        /* Workspace Principal (Grid de Painéis) */
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            grid-template-rows: 1fr 1fr;
+            height: calc(100vh - 40px);
+            background-color: #21252b;
+            gap: 1px;
+        }
+
+        /* Painéis Individuais */
+        .panel {
+            background-color: #21252b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #181a1f;
+        }
+        .panel-header {
+            background-color: #282c34;
+            padding: 6px 10px;
+            font-weight: bold;
+            color: #fff;
+            border-bottom: 1px solid #181a1f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-body {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Viewport 2D (Cena) */
+        .viewport-panel { grid-column: 1; grid-row: 1; }
+        .viewport-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0f1115;
+            position: relative;
+        }
+        canvas {
+            border: 1px solid #3e4452;
+            background-color: #000;
+        }
+
+        /* Painel Inspetor (Direita) */
+        .inspector-panel { grid-column: 2; grid-row: 1 / span 2; }
+        .inspector-section {
+            background: #282c34;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border: 1px solid #3e4452;
+        }
+        .inspector-title {
+            padding: 6px 10px;
+            background: #2c313a;
+            font-weight: bold;
+            color: #61afef;
+            border-bottom: 1px solid #3e4452;
+        }
+        .inspector-content { padding: 8px; }
+        .prop-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .prop-row label { color: #9da5b4; }
+        .prop-row input {
+            width: 60px;
+            background: #181a1f;
+            border: 1px solid #3e4452;
+            color: #fff;
+            padding: 3px 5px;
+            border-radius: 3px;
+            text-align: right;
+        }
+
+        /* Hierarquia / Objetos (Baixo Esquerda) */
+        .hierarchy-panel { grid-column: 1; grid-row: 2; }
+        .hierarchy-item {
+            padding: 6px 8px;
+            background: #282c34;
+            margin-bottom: 4px;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+            border-left: 3px solid #98c379;
+        }
+        .hierarchy-item.active { background: #3a3f4b; border-left-color: #61afef; }
+
+        /* Controles flutuantes na tela para testes */
+        .floating-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 35px);
+            gap: 3px;
+        }
+        .ctrl-btn {
+            background: rgba(40, 44, 52, 0.8);
+            color: #fff;
+            border: 1px solid #3e4452;
+            height: 35px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .ctrl-btn:active { background: #61afef; color: #000; }
+    </style>
+</head>
+<body>
+
+    <!-- Barra de Ferramentas Superior -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <button class="tool-btn play" onclick="togglePlay()">▶ Play</button>
+            <button class="tool-btn">Modo Objeto</button>
+            <button class="tool-btn">Grid 2D</button>
+        </div>
+        <div class="topbar-right">
+            <span style="color: #98c379; font-weight: bold;">C-Voxel v0.2</span>
+        </div>
+    </div>
+
+    <!-- Workspace Estilo Engine Profissional -->
+    <div class="workspace">
+        
+        <!-- 1. VIEWPORT (Cena) -->
+        <div class="panel viewport-panel">
+            <div class="panel-header">Viewport 2D (Cena)</div>
+            <div class="panel-body viewport-container">
+                <canvas id="gameCanvas" width="220" height="220"></canvas>
+                
+                <!-- D-Pad Flutuante para testar movimento no celular -->
+                <div class="floating-controls">
+                    <div></div>
+                    <button class="ctrl-btn" onclick="movePlayer('up')">⬆️</button>
+                    <div></div>
+                    <button class="ctrl-btn" onclick="movePlayer('left')">⬅️</button>
+                    <button class="ctrl-btn" onclick="movePlayer('down')">⬇️</button>
+                    <button class="ctrl-btn" onclick="movePlayer('right')">➡️</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. HIERARQUIA -->
+        <div class="panel hierarchy-panel">
+            <div class="panel-header">Hierarquia</div>
+            <div class="panel-body">
+                <div class="hierarchy-item active" onclick="selectObj('Player')">
+                    <span>🟢 Player</span>
+                    <span style="color: #5c6370;">[Ativo]</span>
+                </div>
+                <div class="hierarchy-item" onclick="selectObj('Lava')">
+                    <span>🔴 Bloco_Lava</span>
+                    <span style="color: #5c6370;">[Estático]</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. INSPETOR DE PROPRIEDADES -->
+        <div class="panel inspector-panel">
+            <div class="panel-header">Inspetor: <span id="inspector-name" style="color: #61afef;">Player</span></div>
+            <div class="panel-body">
+                
+                <!-- Seção Transformação -->
+                <div class="inspector-section">
+                    <div class="inspector-title">Transformação</div>
+                    <div class="inspector-content">
+                        <div class="prop-row">
+                            <label>Posição X</label>
+                            <input type="number" id="pos-x" value="0" onchange="updateTransform()">
+                        </div>
+                        <div class="prop-row">
+                            <label>Posição Y</label>
+                            <input type="number" id="pos-y" value="0" onchange="updateTransform()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção Opções / Componentes -->
+                <div class="inspector-section">
+                    <div class="inspector-title">Componentes</div>
+                    <div class="inspector-content">
+                        <div class="prop-row"><label>Sprite Renderer</label><input type="checkbox" checked disabled></div>
+                        <div class="prop-row"><label>Box Collider</label><input type="checkbox" checked disabled></div>
+                        <div class="prop-row"><label>C-Voxel Script</label><input type="checkbox" checked disabled></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const tileSize = 22;
+        const gridWidth = 10;
+        const gridHeight = 10;
+
+        let gameWorld = {
+            player: { x: 0, y: 0 },
+            lava: { x: 4, y: 4 }
+        };
+
+        let currentObj = 'Player';
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    if (x === gameWorld.lava.x && y === gameWorld.lava.y) {
+                        ctx.fillStyle = '#e06c75'; // Lava
+                        ctx.fillRect(x * tileSize + 1, y * tileSize + 1, tileSize - 2, tileSize - 2);
+                    } else if (x === gameWorld.player.x && y === gameWorld.player.y) {
+                        ctx.fillStyle = '#98c379'; // Player
+                        ctx.fillRect(x * tileSize + 1, y * tileSize + 1, tileSize - 2, tileSize - 2);
+                    } else {
+                        ctx.strokeStyle = '#181a1f';
+                        ctx.strokeRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+
+            if(currentObj === 'Player') {
+                document.getElementById('pos-x').value = gameWorld.player.x;
+                document.getElementById('pos-y').value = gameWorld.player.y;
+            }
+        }
+
+        function movePlayer(dir) {
+            if (dir === 'right' && gameWorld.player.x < gridWidth - 1) gameWorld.player.x++;
+            if (dir === 'left' && gameWorld.player.x > 0) gameWorld.player.x--;
+            if (dir === 'up' && gameWorld.player.y > 0) gameWorld.player.y--;
+            if (dir === 'down' && gameWorld.player.y < gridHeight - 1) gameWorld.player.y++;
+            drawScene();
+        }
+
+        function selectObj(name) {
+            currentObj = name;
+            document.getElementById('inspector-name').innerText = name;
+            if(name === 'Player') {
+                document.getElementById('pos-x').value = gameWorld.player.x;
+                document.getElementById('pos-y').value = gameWorld.player.y;
+            } else {
+                document.getElementById('pos-x').value = gameWorld.lava.x;
+                document.getElementById('pos-y').value = gameWorld.lava.y;
+            }
+        }
+
+        function updateTransform() {
+            const x = parseInt(document.getElementById('pos-x').value) || 0;
+            const y = parseInt(document.getElementById('pos-y').value) || 0;
+            if(currentObj === 'Player') {
+                gameWorld.player.x = x;
+                gameWorld.player.y = y;
+            } else {
+                gameWorld.lava.x = x;
+                gameWorld.lava.y = y;
+            }
+            drawScene();
+        }
+
+        function togglePlay() {
+            alert('Modo Jogo ativado! Testando engine C-Voxel...');
+        }
+
+        drawScene();
+    </script>
+</body>
+</html>
         .tab-btn.active {
             background: #222730;
             color: #00ff66;
