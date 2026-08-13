@@ -28,7 +28,15 @@ class CVoxelParser {
                 continue;
             }
 
-            // 2. Criação de Blocos: block.Create:(Formato, Nome)
+            // 2. Comando Print: print("Mensagem")
+            const printMatch = line.match(/^print\s*\(\s*(['"])(.*?)\1\s*\)$/);
+            if (printMatch) {
+                console.log(printMatch[2]);
+                i++;
+                continue;
+            }
+
+            // 3. Criação de Blocos: block.Create:(Formato, Nome)
             const blockCreateMatch = line.match(/^block\.Create:\(([a-zA-Z]+),\s*([a-zA-Z0-9_]+)\)$/);
             if (blockCreateMatch) {
                 const [, format, name] = blockCreateMatch;
@@ -37,7 +45,7 @@ class CVoxelParser {
                 continue;
             }
 
-            // 3. Cor do Bloco: block.Color:(Nome) = #HEX
+            // 4. Cor do Bloco: block.Color:(Nome) = #HEX
             const blockColorMatch = line.match(/^block\.Color:\(([a-zA-Z0-9_]+)\)\s*=\s*(#[0-9a-fA-F]{6})$/);
             if (blockColorMatch) {
                 const [, name, hex] = blockColorMatch;
@@ -48,7 +56,7 @@ class CVoxelParser {
                 continue;
             }
 
-            // 4. Variáveis: var.Add:(Nome) = Valor
+            // 5. Variáveis: var.Add:(Nome) = Valor
             const varAddMatch = line.match(/^var\.Add:\(([a-zA-Z0-9_]+)\)\s*=\s*(.+)$/);
             if (varAddMatch) {
                 const [, name, value] = varAddMatch;
@@ -57,7 +65,7 @@ class CVoxelParser {
                 continue;
             }
 
-            // 5. GStats Globais: gstats.Add:(Nome, Valor)
+            // 6. GStats Globais: gstats.Add:(Nome, Valor)
             const gstatsAddMatch = line.match(/^gstats\.Add:\(([a-zA-Z0-9_]+),\s*(.+)\)$/);
             if (gstatsAddMatch) {
                 const [, name, value] = gstatsAddMatch;
@@ -66,7 +74,7 @@ class CVoxelParser {
                 continue;
             }
 
-            // 6. Eventos: event.Start:(...)
+            // 7. Eventos: event.Start:(...)
             if (line.startsWith('event.Start:')) {
                 i = this.parseEvent(lines, i);
                 continue;
@@ -107,7 +115,7 @@ class CVoxelParser {
                 console.log(`[MODIFICAÇÃO DE STAT]: ${target} ${op} ${val}`);
             }
 
-            // Adição de gstats pelo player: player.Get:(GameStats.Add:(Coins, 0)) ou gstats.Add
+            // Adição de gstats pelo player
             const playerGetGstatsMatch = line.match(/^player\.Get:\((?:gstats|GameStats)\.Add:\(([a-zA-Z0-9_]+),\s*(.+)\)\)$/);
             if (playerGetGstatsMatch && activated) {
                 const [, statName, val] = playerGetGstatsMatch;
